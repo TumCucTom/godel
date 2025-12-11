@@ -73,6 +73,18 @@
                             <option value="rgb">Full RGB (24-bit)</option>
                         </select>
                     </div>
+                    <div class="slider-controls">
+                        <div class="slider-group">
+                            <label for="encoding-shift">Encoding Shift: <span id="encoding-shift-value">0</span></label>
+                            <input type="range" id="encoding-shift" min="0" max="35" value="0">
+                            <span class="slider-hint">Shifts character values (A→B→C... with overflow)</span>
+                        </div>
+                        <div class="slider-group" id="color-shift-group">
+                            <label for="color-shift">Color Channel Shift: <span id="color-shift-value">0</span></label>
+                            <input type="range" id="color-shift" min="0" max="2" value="0">
+                            <span class="slider-hint">Rotates RGB channels (0=RGB, 1=GBR, 2=BRG)</span>
+                        </div>
+                    </div>
                     <div id="pixel-grid-container" class="pixel-grid-container">
                         <canvas id="pixel-grid"></canvas>
                     </div>
