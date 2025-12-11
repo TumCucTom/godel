@@ -35,7 +35,7 @@
                     <div class="formula">
                         N = p<sub>1</sub><sup>c<sub>1</sub></sup> × p<sub>2</sub><sup>c<sub>2</sub></sup> × p<sub>3</sub><sup>c<sub>3</sub></sup> × ...
                     </div>
-                    <p>Where p<sub>i</sub> is the i-th prime number and c<sub>i</sub> is the character value:</p>
+                    <p>Where p<sub>i</sub> is the i-th prime and c<sub>i</sub> is the character value:</p>
                     <ul>
                         <li>A-Z → 1-26</li>
                         <li>0-9 → 27-36</li>
@@ -66,13 +66,11 @@
                 <div class="result-card">
                     <h3>Binary Pixel Grid</h3>
                     <div class="grid-controls">
-                        <label>Color scheme:</label>
-                        <select id="color-scheme">
-                            <option value="bw">Black & White</option>
-                            <option value="green">Matrix Green</option>
-                            <option value="blue">Ocean Blue</option>
-                            <option value="fire">Fire</option>
-                            <option value="rainbow">Rainbow Position</option>
+                        <label>Color mode:</label>
+                        <select id="color-mode">
+                            <option value="bw">Black & White (1 bit/pixel)</option>
+                            <option value="greyscale">Greyscale (8 bits/pixel)</option>
+                            <option value="rgb">RGB (24 bits/pixel)</option>
                         </select>
                     </div>
                     <div id="pixel-grid-container" class="pixel-grid-container">
