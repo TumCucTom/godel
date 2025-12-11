@@ -95,54 +95,63 @@ function createBinaryHTML(binary) {
     ).join('');
 }
 
-// Color schemes for pixel grid
-const colorSchemes = {
-    bw: {
-        zero: [20, 20, 30],
-        one: [255, 255, 255]
-    },
-    green: {
-        zero: [10, 20, 10],
-        one: [0, 255, 100]
-    },
-    blue: {
-        zero: [10, 20, 40],
-        one: [100, 200, 255]
-    },
-    fire: {
-        zero: [30, 10, 10],
-        one: [255, 100, 50]
-    },
-    rainbow: null // Special handling for position-based rainbow
-};
-
-// Get rainbow color based on position
-function getRainbowColor(index, total) {
-    const hue = (index / total) * 360;
-    const h = hue / 60;
-    const c = 255;
-    const x = c * (1 - Math.abs(h % 2 - 1));
-    
-    let r, g, b;
-    if (h < 1) { r = c; g = x; b = 0; }
-    else if (h < 2) { r = x; g = c; b = 0; }
-    else if (h < 3) { r = 0; g = c; b = x; }
-    else if (h < 4) { r = 0; g = x; b = c; }
-    else if (h < 5) { r = x; g = 0; b = c; }
-    else { r = c; g = 0; b = x; }
-    
-    return [Math.round(r), Math.round(g), Math.round(b)];
+// Convert binary string chunk to integer value
+function binaryToInt(binaryStr) {
+    let value = 0;
+    for (let i = 0; i < binaryStr.length; i++) {
+        value = value * 2 + (binaryStr[i] === '1' ? 1 : 0);
+    }
+    return value;
 }
 
 // Draw pixel grid on canvas
-function drawPixelGrid(binary, scheme) {
+function drawPixelGrid(binary, mode) {
     const canvas = document.getElementById('pixel-grid');
     const ctx = canvas.getContext('2d');
     
+    let pixels = [];
+    let bitsPerPixel;
+    let modeDescription;
+    
+    if (mode === 'bw') {
+        // Black & White (1-bit): each bit is a pixel
+        bitsPerPixel = 1;
+        modeDescription = '1-bit Black & White';
+        for (let i = 0; i < binary.length; i++) {
+            const value = binary[i] === '1' ? 255 : 0;
+            pixels.push([value, value, value]);
+        }
+    } else if (mode === 'greyscale') {
+        // Greyscale (8-bit): every 8 bits = one grey level (0-255)
+        bitsPerPixel = 8;
+        modeDescription = '8-bit Greyscale (256 levels)';
+        for (let i = 0; i < binary.length; i += 8) {
+            const chunk = binary.substring(i, Math.min(i + 8, binary.length));
+            // Pad with zeros if needed
+            const paddedChunk = chunk.padEnd(8, '0');
+            const greyValue = binaryToInt(paddedChunk);
+            pixels.push([greyValue, greyValue, greyValue]);
+        }
+    } else if (mode === 'rgb') {
+        // Full RGB (24-bit): every 24 bits = one RGB pixel
+        bitsPerPixel = 24;
+        modeDescription = '24-bit RGB (16.7M colours)';
+        for (let i = 0; i < binary.length; i += 24) {
+            const chunk = binary.substring(i, Math.min(i + 24, binary.length));
+            // Pad with zeros if needed
+            const paddedChunk = chunk.padEnd(24, '0');
+            const r = binaryToInt(paddedChunk.substring(0, 8));
+            const g = binaryToInt(paddedChunk.substring(8, 16));
+            const b = binaryToInt(paddedChunk.substring(16, 24));
+            pixels.push([r, g, b]);
+        }
+    }
+    
+    const totalPixels = pixels.length;
+    
     // Calculate grid dimensions (aim for roughly square)
-    const totalBits = binary.length;
-    const width = Math.ceil(Math.sqrt(totalBits));
-    const height = Math.ceil(totalBits / width);
+    const width = Math.ceil(Math.sqrt(totalPixels));
+    const height = Math.ceil(totalPixels / width);
     
     // Set pixel size based on grid dimensions
     const maxCanvasSize = 500;
@@ -151,45 +160,30 @@ function drawPixelGrid(binary, scheme) {
     canvas.width = width * pixelSize;
     canvas.height = height * pixelSize;
     
-    // Get color scheme
-    const colors = colorSchemes[scheme];
-    
     // Draw pixels
-    for (let i = 0; i < totalBits; i++) {
+    for (let i = 0; i < totalPixels; i++) {
         const x = (i % width) * pixelSize;
         const y = Math.floor(i / width) * pixelSize;
-        const bit = binary[i];
-        
-        let color;
-        if (scheme === 'rainbow') {
-            if (bit === '1') {
-                color = getRainbowColor(i, totalBits);
-            } else {
-                color = [20, 20, 30];
-            }
-        } else {
-            color = bit === '1' ? colors.one : colors.zero;
-        }
+        const color = pixels[i];
         
         ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
         ctx.fillRect(x, y, pixelSize, pixelSize);
     }
     
-    // Pad remaining cells with zero color
-    const remainingCells = width * height - totalBits;
+    // Pad remaining cells with black
+    const remainingCells = width * height - totalPixels;
     for (let i = 0; i < remainingCells; i++) {
-        const index = totalBits + i;
+        const index = totalPixels + i;
         const x = (index % width) * pixelSize;
         const y = Math.floor(index / width) * pixelSize;
         
-        const zeroColor = scheme === 'rainbow' ? [20, 20, 30] : colors.zero;
-        ctx.fillStyle = `rgb(${zeroColor[0]}, ${zeroColor[1]}, ${zeroColor[2]})`;
+        ctx.fillStyle = 'rgb(0, 0, 0)';
         ctx.fillRect(x, y, pixelSize, pixelSize);
     }
     
     // Update dimensions display
     document.getElementById('grid-dimensions').textContent = 
-        `Grid: ${width} × ${height} pixels (${totalBits} bits, pixel size: ${pixelSize}px)`;
+        `${modeDescription} | Grid: ${width} × ${height} pixels (${totalPixels} pixels from ${binary.length} bits)`;
     
     return { width, height, pixelSize };
 }
