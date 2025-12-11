@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gödel Prime Text to Binary Image</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Gödel Prime Encoder</h1>
+            <p class="subtitle">Transform text into numbers and binary pixel art</p>
+        </header>
+
+        <main>
+            <section class="input-section">
+                <label for="text-input">Enter text (letters A-Z and numbers 0-9 only):</label>
+                <div class="input-wrapper">
+                    <input 
+                        type="text" 
+                        id="text-input" 
+                        placeholder="Type something like 'Hello123'..."
+                        autocomplete="off"
+                    >
+                    <button id="encode-btn">Encode</button>
+                </div>
+                <p id="error-message" class="error-message"></p>
+            </section>
+
+            <section class="info-section">
+                <h2>How it works</h2>
+                <div class="info-card">
+                    <p>The <strong>Gödel prime encoding</strong> converts text to a unique number:</p>
+                    <div class="formula">
+                        N = p<sub>1</sub><sup>c<sub>1</sub></sup> × p<sub>2</sub><sup>c<sub>2</sub></sup> × p<sub>3</sub><sup>c<sub>3</sub></sup> × ...
+                    </div>
+                    <p>Where p<sub>i</sub> is the i-th prime number and c<sub>i</sub> is the character value:</p>
+                    <ul>
+                        <li>A-Z → 1-26</li>
+                        <li>0-9 → 27-36</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="result-section" class="result-section hidden">
+                <h2>Results</h2>
+                
+                <div class="result-card">
+                    <h3>Encoding Breakdown</h3>
+                    <div id="encoding-breakdown" class="encoding-breakdown"></div>
+                </div>
+
+                <div class="result-card">
+                    <h3>Gödel Number</h3>
+                    <div id="godel-number" class="godel-number"></div>
+                    <p class="digit-count">(<span id="digit-count">0</span> digits)</p>
+                </div>
+
+                <div class="result-card">
+                    <h3>Binary Representation</h3>
+                    <div id="binary-info" class="binary-info"></div>
+                    <div id="binary-display" class="binary-display"></div>
+                </div>
+
+                <div class="result-card">
+                    <h3>Binary Pixel Grid</h3>
+                    <div class="grid-controls">
+                        <label>Color scheme:</label>
+                        <select id="color-scheme">
+                            <option value="bw">Black & White</option>
+                            <option value="green">Matrix Green</option>
+                            <option value="blue">Ocean Blue</option>
+                            <option value="fire">Fire</option>
+                            <option value="rainbow">Rainbow Position</option>
+                        </select>
+                    </div>
+                    <div id="pixel-grid-container" class="pixel-grid-container">
+                        <canvas id="pixel-grid"></canvas>
+                    </div>
+                    <p id="grid-dimensions" class="grid-dimensions"></p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Inspired by Kurt Gödel's numbering system</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
