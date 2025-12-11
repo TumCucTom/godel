@@ -25,15 +25,25 @@ function generatePrimes(count) {
 // Pre-generate enough primes for reasonable input lengths
 const PRIMES = generatePrimes(1000);
 
-// Get character value: A-Z = 1-26, 0-9 = 27-36
-function getCharValue(char) {
+// Get character value: A-Z = 1-26, 0-9 = 27-36, with optional shift
+function getCharValue(char, shift = 0) {
     const upper = char.toUpperCase();
+    let baseValue;
+    
     if (upper >= 'A' && upper <= 'Z') {
-        return upper.charCodeAt(0) - 'A'.charCodeAt(0) + 1;
+        baseValue = upper.charCodeAt(0) - 'A'.charCodeAt(0) + 1;
     } else if (char >= '0' && char <= '9') {
-        return char.charCodeAt(0) - '0'.charCodeAt(0) + 27;
+        baseValue = char.charCodeAt(0) - '0'.charCodeAt(0) + 27;
+    } else {
+        return null;
     }
-    return null;
+    
+    // Apply shift with overflow (values 1-36, so we shift within 0-35 then add 1)
+    if (shift !== 0) {
+        baseValue = ((baseValue - 1 + shift) % 36) + 1;
+    }
+    
+    return baseValue;
 }
 
 // Validate input - only allow alphanumeric characters
@@ -43,13 +53,13 @@ function validateInput(text) {
 }
 
 // Calculate Gödel number using BigInt for arbitrary precision
-function calculateGodelNumber(text) {
+function calculateGodelNumber(text, encodingShift = 0) {
     let result = 1n;
     const breakdown = [];
     
     for (let i = 0; i < text.length; i++) {
         const char = text[i];
-        const charValue = getCharValue(char);
+        const charValue = getCharValue(char, encodingShift);
         const prime = PRIMES[i];
         
         // Calculate prime^charValue
@@ -105,13 +115,21 @@ function binaryToInt(binaryStr) {
 }
 
 // Draw pixel grid on canvas
-function drawPixelGrid(binary, mode) {
+function drawPixelGrid(binary, mode, colorShift = 0) {
     const canvas = document.getElementById('pixel-grid');
     const ctx = canvas.getContext('2d');
     
     let pixels = [];
     let bitsPerPixel;
     let modeDescription;
+    
+    // Color channel order based on shift (only used for RGB mode)
+    const channelOrders = [
+        ['R', 'G', 'B'],  // 0: RGB (default)
+        ['G', 'B', 'R'],  // 1: GBR
+        ['B', 'R', 'G']   // 2: BRG
+    ];
+    const channelOrder = channelOrders[colorShift % 3];
     
     if (mode === 'bw') {
         // Black & White (1-bit): each bit is a pixel
@@ -135,14 +153,30 @@ function drawPixelGrid(binary, mode) {
     } else if (mode === 'rgb') {
         // Full RGB (24-bit): every 24 bits = one RGB pixel
         bitsPerPixel = 24;
-        modeDescription = '24-bit RGB (16.7M colours)';
+        modeDescription = `24-bit RGB (${channelOrder.join('')} order)`;
         for (let i = 0; i < binary.length; i += 24) {
             const chunk = binary.substring(i, Math.min(i + 24, binary.length));
             // Pad with zeros if needed
             const paddedChunk = chunk.padEnd(24, '0');
-            const r = binaryToInt(paddedChunk.substring(0, 8));
-            const g = binaryToInt(paddedChunk.substring(8, 16));
-            const b = binaryToInt(paddedChunk.substring(16, 24));
+            
+            // Extract the three 8-bit values
+            const val1 = binaryToInt(paddedChunk.substring(0, 8));
+            const val2 = binaryToInt(paddedChunk.substring(8, 16));
+            const val3 = binaryToInt(paddedChunk.substring(16, 24));
+            
+            // Map values to RGB based on color shift
+            let r, g, b;
+            if (colorShift === 0) {
+                // RGB: val1=R, val2=G, val3=B
+                r = val1; g = val2; b = val3;
+            } else if (colorShift === 1) {
+                // GBR: val1=G, val2=B, val3=R
+                g = val1; b = val2; r = val3;
+            } else {
+                // BRG: val1=B, val2=R, val3=G
+                b = val1; r = val2; g = val3;
+            }
+            
             pixels.push([r, g, b]);
         }
     }
@@ -193,6 +227,8 @@ function encode() {
     const input = document.getElementById('text-input').value;
     const errorEl = document.getElementById('error-message');
     const resultSection = document.getElementById('result-section');
+    const encodingShift = parseInt(document.getElementById('encoding-shift').value) || 0;
+    const colorShift = parseInt(document.getElementById('color-shift').value) || 0;
     
     // Clear previous error
     errorEl.textContent = '';
@@ -216,8 +252,8 @@ function encode() {
         return;
     }
     
-    // Calculate Gödel number
-    const { number, breakdown } = calculateGodelNumber(input);
+    // Calculate Gödel number with encoding shift
+    const { number, breakdown } = calculateGodelNumber(input, encodingShift);
     const numberStr = number.toString();
     const binary = toBinary(number);
     
@@ -233,9 +269,9 @@ function encode() {
         `${binary.length.toLocaleString()} bits in binary representation`;
     document.getElementById('binary-display').innerHTML = createBinaryHTML(binary);
     
-    // Draw pixel grid
+    // Draw pixel grid with color shift
     const colorScheme = document.getElementById('color-scheme').value;
-    drawPixelGrid(binary, colorScheme);
+    drawPixelGrid(binary, colorScheme, colorShift);
     
     // Show results
     resultSection.classList.remove('hidden');
@@ -244,11 +280,60 @@ function encode() {
     resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// Update color shift slider visibility based on mode
+function updateColorShiftVisibility() {
+    const colorScheme = document.getElementById('color-scheme').value;
+    const colorShiftGroup = document.getElementById('color-shift-group');
+    
+    if (colorScheme === 'rgb') {
+        colorShiftGroup.classList.remove('disabled');
+    } else {
+        colorShiftGroup.classList.add('disabled');
+    }
+}
+
+// Re-render the grid with current settings (without full re-encode for slider changes)
+function refreshGrid() {
+    const textInput = document.getElementById('text-input');
+    const input = textInput.value;
+    
+    if (input && validateInput(input)) {
+        const encodingShift = parseInt(document.getElementById('encoding-shift').value) || 0;
+        const colorShift = parseInt(document.getElementById('color-shift').value) || 0;
+        const colorScheme = document.getElementById('color-scheme').value;
+        
+        const { number, breakdown } = calculateGodelNumber(input, encodingShift);
+        const numberStr = number.toString();
+        const binary = toBinary(number);
+        
+        // Update breakdown display
+        document.getElementById('encoding-breakdown').innerHTML = createBreakdownHTML(breakdown);
+        
+        // Update Gödel number display
+        document.getElementById('godel-number').textContent = numberStr;
+        document.getElementById('digit-count').textContent = numberStr.length.toLocaleString();
+        
+        // Update binary display
+        document.getElementById('binary-info').textContent = 
+            `${binary.length.toLocaleString()} bits in binary representation`;
+        document.getElementById('binary-display').innerHTML = createBinaryHTML(binary);
+        
+        drawPixelGrid(binary, colorScheme, colorScheme === 'rgb' ? colorShift : 0);
+    }
+}
+
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
     const encodeBtn = document.getElementById('encode-btn');
     const textInput = document.getElementById('text-input');
     const colorScheme = document.getElementById('color-scheme');
+    const encodingShiftSlider = document.getElementById('encoding-shift');
+    const colorShiftSlider = document.getElementById('color-shift');
+    const encodingShiftValue = document.getElementById('encoding-shift-value');
+    const colorShiftValue = document.getElementById('color-shift-value');
+    
+    // Initialize color shift visibility
+    updateColorShiftVisibility();
     
     // Encode on button click
     encodeBtn.addEventListener('click', encode);
@@ -270,11 +355,19 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Re-render grid on color scheme change
     colorScheme.addEventListener('change', () => {
-        const input = textInput.value;
-        if (input && validateInput(input)) {
-            const { number } = calculateGodelNumber(input);
-            const binary = toBinary(number);
-            drawPixelGrid(binary, colorScheme.value);
-        }
+        updateColorShiftVisibility();
+        refreshGrid();
+    });
+    
+    // Encoding shift slider
+    encodingShiftSlider.addEventListener('input', (e) => {
+        encodingShiftValue.textContent = e.target.value;
+        refreshGrid();
+    });
+    
+    // Color shift slider
+    colorShiftSlider.addEventListener('input', (e) => {
+        colorShiftValue.textContent = e.target.value;
+        refreshGrid();
     });
 });
